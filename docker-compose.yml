@@ -1,0 +1,43 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: hr-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hr_admin
+      POSTGRES_PASSWORD: HrPlatform2026!
+      POSTGRES_DB: hr_platform
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+
+  backend:
+    build: ./hr-platform-backend
+    container_name: hr-backend
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      PORT: 5000
+      DATABASE_URL: postgresql://hr_admin:HrPlatform2026!@postgres:5432/hr_platform
+      JWT_SECRET: replace_with_a_long_random_string
+      JWT_EXPIRES_IN: 1d
+      FRONTEND_URL: http://localhost:8090
+    ports:
+      - "5000:5000"
+    volumes:
+      - backend_uploads:/app/uploads
+
+  frontend:
+    build: ./hr-platform-frontend
+    container_name: hr-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8090:80"
+
+volumes:
+  postgres_data:
+  backend_uploads:

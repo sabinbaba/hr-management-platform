@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  table thead th {
+    @apply text-gray-600 tracking-wide;
+  }
+
+  table tbody tr {
+    @apply transition-colors duration-100;
+  }
+
+  table tbody tr:nth-child(even) {
+    background-color: #FAFBFD;
+  }
+
+  table tbody tr:hover {
+    background-color: #F0F4FF;
+  }
+}

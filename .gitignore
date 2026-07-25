@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment files (NEVER commit real secrets)
+.env
+.env.test
+**/.env
+**/.env.test
+
+# Build output
+hr-platform-frontend/dist/
+
+# Logs
+hr-platform-backend/logs/
+*.log
+
+# Uploaded files (user data, not source code)
+hr-platform-backend/uploads/
+
+# OS/editor cruft
+.DS_Store
+.vscode/
+*.swp
+
+# Docker
+docker-compose.override.yml
+resume.pdf
