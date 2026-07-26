@@ -6,8 +6,9 @@ services:
       POSTGRES_USER: hr_admin
       POSTGRES_PASSWORD: HrPlatform2026!
       POSTGRES_DB: hr_platform_test
-    ports:
-      - "5433:5432"
+    # No host port mapping needed — services communicate over internal ci-network
+    expose:
+      - "5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U hr_admin -d hr_platform_test"]
       interval: 3s
