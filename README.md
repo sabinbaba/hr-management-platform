@@ -277,3 +277,4 @@ now uses `checkout scm` per stage instead — no fix needed.
 ## CI/CD
 
 This project uses Jenkins for automated testing and Docker image builds on every push to `main`.
+The best `main`.
