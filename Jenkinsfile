@@ -12,10 +12,11 @@ pipeline {
 
         stage('Install Backend Dependencies') {
             agent {
-                docker { image 'node:20-slim' }
+                docker { image 'node:20-slim'; args '-u root:root' }
             }
             steps {
                 unstash 'source'
+                sh 'apt-get update -y && apt-get install -y openssl'
                 dir('hr-platform-backend') {
                     sh 'npm install'
                     sh 'npx prisma generate'
@@ -26,11 +27,12 @@ pipeline {
 
         stage('Run Backend Tests') {
             agent {
-                docker { image 'node:20-slim' }
+                docker { image 'node:20-slim'; args '-u root:root' }
             }
             steps {
                 unstash 'source'
                 unstash 'backend-deps'
+                sh 'apt-get update -y && apt-get install -y openssl'
                 dir('hr-platform-backend') {
                     sh 'npm test'
                 }
