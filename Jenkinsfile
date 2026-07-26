@@ -6,7 +6,6 @@ pipeline {
             agent any
             steps {
                 checkout scm
-                stash includes: '**', name: 'source'
             }
         }
 
@@ -15,7 +14,7 @@ pipeline {
                 docker { image 'node:20-slim'; args '-u root:root' }
             }
             steps {
-                unstash 'source'
+                checkout scm
                 sh 'apt-get update -y && apt-get install -y openssl'
                 dir('hr-platform-backend') {
                     sh 'npm install'
@@ -30,7 +29,7 @@ pipeline {
                 docker { image 'node:20-slim'; args '-u root:root' }
             }
             steps {
-                unstash 'source'
+                checkout scm
                 unstash 'backend-deps'
                 sh 'apt-get update -y && apt-get install -y openssl'
                 dir('hr-platform-backend') {
@@ -42,7 +41,7 @@ pipeline {
         stage('Build Backend Docker Image') {
             agent any
             steps {
-                unstash 'source'
+                checkout scm
                 dir('hr-platform-backend') {
                     sh 'docker build -t hr-platform-backend:${BUILD_NUMBER} .'
                 }
@@ -52,7 +51,7 @@ pipeline {
         stage('Build Frontend Docker Image') {
             agent any
             steps {
-                unstash 'source'
+                checkout scm
                 dir('hr-platform-frontend') {
                     sh 'docker build -t hr-platform-frontend:${BUILD_NUMBER} .'
                 }
