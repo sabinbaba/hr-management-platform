@@ -6,54 +6,43 @@ pipeline {
             agent any
             steps {
                 checkout scm
-            }
-        }
-
-        stage('Install Backend Dependencies') {
-            agent {
-                docker { image 'node:20-slim'; args '-u root:root' }
-            }
-            steps {
-                checkout scm
-                sh 'apt-get update -y && apt-get install -y openssl'
-                dir('hr-platform-backend') {
-                    sh 'npm install'
-                    sh 'npx prisma generate'
-                }
+                stash includes: '**/*', name: 'workspace'
             }
         }
 
         stage('Run Backend Tests') {
-            agent {
-                docker { image 'node:20-slim'; args '-u root:root' }
-            }
+            agent any
             steps {
-                checkout scm
-                sh 'apt-get update -y && apt-get install -y openssl'
-                dir('hr-platform-backend') {
-                    sh 'npm install'
-                    sh 'npx prisma generate'
-                    sh 'npm test'
+                unstash 'workspace'
+                sh 'docker compose -f docker-compose.ci.yml up --build --abort-on-container-exit --exit-code-from test-runner'
+            }
+            post {
+                always {
+                    sh 'docker compose -f docker-compose.ci.yml down -v'
                 }
             }
         }
 
-        stage('Build Backend Docker Image') {
-            agent any
-            steps {
-                checkout scm
-                dir('hr-platform-backend') {
-                    sh 'docker build -t hr-platform-backend:${BUILD_NUMBER} .'
+        stage('Build Docker Images') {
+            parallel {
+                stage('Build Backend Docker Image') {
+                    agent any
+                    steps {
+                        unstash 'workspace'
+                        dir('hr-platform-backend') {
+                            sh 'docker build -t hr-platform-backend:${BUILD_NUMBER} .'
+                        }
+                    }
                 }
-            }
-        }
 
-        stage('Build Frontend Docker Image') {
-            agent any
-            steps {
-                checkout scm
-                dir('hr-platform-frontend') {
-                    sh 'docker build -t hr-platform-frontend:${BUILD_NUMBER} .'
+                stage('Build Frontend Docker Image') {
+                    agent any
+                    steps {
+                        unstash 'workspace'
+                        dir('hr-platform-frontend') {
+                            sh 'docker build -t hr-platform-frontend:${BUILD_NUMBER} .'
+                        }
+                    }
                 }
             }
         }

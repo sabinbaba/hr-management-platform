@@ -1,0 +1,45 @@
+services:
+  postgres-test:
+    image: postgres:16
+    container_name: hr-postgres-ci
+    environment:
+      POSTGRES_USER: hr_admin
+      POSTGRES_PASSWORD: HrPlatform2026!
+      POSTGRES_DB: hr_platform_test
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hr_admin -d hr_platform_test"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    tmpfs: /var/lib/postgresql/data
+    networks:
+      - ci-network
+
+  test-runner:
+    build:
+      context: ./hr-platform-backend
+      dockerfile: Dockerfile.ci
+    container_name: hr-test-runner
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://hr_admin:HrPlatform2026!@postgres-test:5432/hr_platform_test
+      JWT_SECRET: ci_test_secret_key
+      JWT_EXPIRES_IN: 1d
+      FRONTEND_URL: http://localhost:5173
+    command: >
+      sh -c "
+        npx prisma migrate deploy &&
+        npm test
+      "
+    networks:
+      - ci-network
+
+networks:
+  ci-network:
+    driver: bridge
+
