@@ -5,7 +5,6 @@ services:
       POSTGRES_USER: hr_admin
       POSTGRES_PASSWORD: HrPlatform2026!
       POSTGRES_DB: hr_platform_test
-    # No host port mapping needed — services communicate over internal ci-network
     expose:
       - "5432"
     healthcheck:
@@ -41,4 +40,3 @@ services:
 networks:
   ci-network:
     driver: bridge
-
