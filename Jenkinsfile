@@ -20,7 +20,6 @@ pipeline {
                     sh 'npm install'
                     sh 'npx prisma generate'
                 }
-                stash includes: 'hr-platform-backend/node_modules/**', name: 'backend-deps'
             }
         }
 
@@ -30,9 +29,10 @@ pipeline {
             }
             steps {
                 checkout scm
-                unstash 'backend-deps'
                 sh 'apt-get update -y && apt-get install -y openssl'
                 dir('hr-platform-backend') {
+                    sh 'npm install'
+                    sh 'npx prisma generate'
                     sh 'npm test'
                 }
             }
