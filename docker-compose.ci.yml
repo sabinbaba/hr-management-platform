@@ -1,7 +1,6 @@
 services:
   postgres-test:
     image: postgres:16
-    container_name: hr-postgres-ci
     environment:
       POSTGRES_USER: hr_admin
       POSTGRES_PASSWORD: HrPlatform2026!
@@ -23,7 +22,6 @@ services:
     build:
       context: ./hr-platform-backend
       dockerfile: Dockerfile.ci
-    container_name: hr-test-runner
     depends_on:
       postgres-test:
         condition: service_healthy

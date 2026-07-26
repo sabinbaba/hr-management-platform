@@ -1,15 +1,19 @@
 pipeline {
     agent any
 
+    environment {
+        COMPOSE_PROJECT_NAME = "hr-ci-${BUILD_NUMBER}"
+    }
+
     stages {
         stage('Run Backend Tests') {
             steps {
                 checkout scm
-                sh 'docker compose -f docker-compose.ci.yml up --build --abort-on-container-exit --exit-code-from test-runner'
+                sh 'docker compose -f docker-compose.ci.yml up --build --abort-on-container-exit --exit-code-from test-runner --remove-orphans'
             }
             post {
                 always {
-                    sh 'docker compose -f docker-compose.ci.yml down -v'
+                    sh 'docker compose -f docker-compose.ci.yml down -v --remove-orphans'
                 }
             }
         }
