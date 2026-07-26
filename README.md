@@ -273,3 +273,7 @@ now uses `checkout scm` per stage instead — no fix needed.
 - ✅ CI/CD pipeline — Jenkins, fully passing
 - 🔲 Kubernetes deployment — planned
 - 🔲 Monitoring & logging — planned
+
+## CI/CD
+
+This project uses Jenkins for automated testing and Docker image builds on every push to `main`.
