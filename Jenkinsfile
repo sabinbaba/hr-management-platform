@@ -6,9 +6,20 @@ pipeline {
     }
 
     stages {
-        stage('Run Backend Tests') {
+        stage('Checkout') {
             steps {
                 checkout scm
+            }
+        }
+
+        stage('Secret Scan (GitLeaks)') {
+            steps {
+                sh 'docker run --rm -v $(pwd):/repo zricethezav/gitleaks:latest detect --source /repo -v --exit-code 1'
+            }
+        }
+
+        stage('Run Backend Tests') {
+            steps {
                 sh 'docker compose -f docker-compose.ci.yml up --build --abort-on-container-exit --exit-code-from test-runner --remove-orphans'
             }
             post {
@@ -23,7 +34,6 @@ pipeline {
             parallel {
                 stage('Build Backend Docker Image') {
                     steps {
-                        checkout scm
                         dir('hr-platform-backend') {
                             sh 'docker build -t hr-platform-backend:${BUILD_NUMBER} .'
                         }
@@ -32,7 +42,6 @@ pipeline {
 
                 stage('Build Frontend Docker Image') {
                     steps {
-                        checkout scm
                         dir('hr-platform-frontend') {
                             sh 'docker build -t hr-platform-frontend:${BUILD_NUMBER} .'
                         }
