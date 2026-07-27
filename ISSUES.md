@@ -396,3 +396,4 @@ Note: This issue does **not** affect the CI pipeline because Docker Compose pass
 ## Status
 
 All issues resolved. Jenkins pipeline passes end-to-end with **11/11 tests passing** across 2 test suites (auth + leave).
+good
