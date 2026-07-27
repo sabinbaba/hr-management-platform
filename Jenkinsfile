@@ -14,6 +14,7 @@ pipeline {
             post {
                 always {
                     sh 'docker compose -f docker-compose.ci.yml down -v --remove-orphans'
+                    sh 'docker image rm -f $(docker images "hr-ci-*" -q) || true'
                 }
             }
         }
@@ -44,6 +45,10 @@ pipeline {
     post {
         success {
             echo 'Pipeline completed successfully!'
+            sh '''
+                docker images hr-platform-backend --format "{{.Tag}}" | grep -E "^[0-9]+$" | sort -rn | tail -n +6 | xargs -I {} docker rmi -f hr-platform-backend:{} || true
+                docker images hr-platform-frontend --format "{{.Tag}}" | grep -E "^[0-9]+$" | sort -rn | tail -n +6 | xargs -I {} docker rmi -f hr-platform-frontend:{} || true
+            '''
         }
         failure {
             echo 'Pipeline failed — check the logs above.'
