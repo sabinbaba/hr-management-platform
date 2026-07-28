@@ -18,6 +18,27 @@ pipeline {
             }
         }
 
+        stage('Dependency Scan (OWASP)') {
+            steps {
+                sh '''
+                    docker run --rm \
+                        -v $(pwd)/hr-platform-backend:/src \
+                        -v $(pwd)/owasp-reports:/report \
+                        owasp/dependency-check:latest \
+                        --scan /src \
+                        --format "HTML" \
+                        --project "hr-platform-backend" \
+                        --out /report \
+                        --disableAssembly || true
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'owasp-reports/**', allowEmptyArchive: true
+                }
+            }
+        }
+
         stage('Run Backend Tests') {
             steps {
                 sh 'docker compose -f docker-compose.ci.yml up --build --abort-on-container-exit --exit-code-from test-runner --remove-orphans'
@@ -26,6 +47,21 @@ pipeline {
                 always {
                     sh 'docker compose -f docker-compose.ci.yml down -v --remove-orphans'
                     sh 'docker image rm -f $(docker images "hr-ci-*" -q) || true'
+                }
+            }
+        }
+
+        stage('Static Code Analysis (SonarQube)') {
+            steps {
+                withCredentials([string(credentialsId: 'sonarqube-token', variable: 'SONAR_TOKEN')]) {
+                    sh '''
+                        docker run --rm \
+                            -v $(pwd):/usr/src \
+                            -w /usr/src \
+                            sonarsource/sonar-scanner-cli:latest \
+                            -Dsonar.host.url=http://sonarqube:9000 \
+                            -Dsonar.login=${SONAR_TOKEN} || true
+                    '''
                 }
             }
         }
@@ -47,6 +83,26 @@ pipeline {
                         }
                     }
                 }
+            }
+        }
+
+        stage('Container Vulnerability Scan (Trivy)') {
+            steps {
+                sh '''
+                    docker run --rm \
+                        -v /var/run/docker.sock:/var/run/docker.sock \
+                        aquasec/trivy:latest image \
+                        --severity HIGH,CRITICAL \
+                        --exit-code 0 \
+                        hr-platform-backend:${BUILD_NUMBER}
+
+                    docker run --rm \
+                        -v /var/run/docker.sock:/var/run/docker.sock \
+                        aquasec/trivy:latest image \
+                        --severity HIGH,CRITICAL \
+                        --exit-code 0 \
+                        hr-platform-frontend:${BUILD_NUMBER}
+                '''
             }
         }
     }
