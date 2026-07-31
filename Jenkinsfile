@@ -21,22 +21,44 @@ pipeline {
 
         stage('Dependency Scan (OWASP)') {
             options {
-                timeout(time: 10, unit: 'MINUTES')
+                timeout(time: 15, unit: 'MINUTES')
             }
             steps {
-                withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
-                    sh '''
-                        docker run --rm \
-                            -v $(pwd)/hr-platform-backend:/src \
-                            -v $(pwd)/owasp-reports:/report \
-                            owasp/dependency-check:latest \
-                            --scan /src \
-                            --format "HTML" \
-                            --project "hr-platform-backend" \
-                            --out /report \
-                            --nvdApiKey "$NVD_API_KEY" \
-                            --disableAssembly || true
-                    '''
+                script {
+                    def hasNvdKey = true
+                    try {
+                        withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
+                            sh '''
+                                docker run --rm \
+                                    -v $(pwd)/hr-platform-backend:/src \
+                                    -v $(pwd)/owasp-reports:/report \
+                                    owasp/dependency-check:latest \
+                                    --scan /src \
+                                    --format "HTML" \
+                                    --project "hr-platform-backend" \
+                                    --out /report \
+                                    --nvdApiKey "$NVD_API_KEY" \
+                                    --disableAssembly || true
+                            '''
+                        }
+                    } catch (Exception e) {
+                        hasNvdKey = false
+                    }
+
+                    if (!hasNvdKey) {
+                        echo "No NVD API key configured (credential 'nvd-api-key' not found) — running without it. This will be slower."
+                        sh '''
+                            docker run --rm \
+                                -v $(pwd)/hr-platform-backend:/src \
+                                -v $(pwd)/owasp-reports:/report \
+                                owasp/dependency-check:latest \
+                                --scan /src \
+                                --format "HTML" \
+                                --project "hr-platform-backend" \
+                                --out /report \
+                                --disableAssembly || true
+                        '''
+                    }
                 }
             }
             post {
