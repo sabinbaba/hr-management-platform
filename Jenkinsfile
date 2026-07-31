@@ -3,6 +3,7 @@ pipeline {
 
     environment {
         COMPOSE_PROJECT_NAME = "hr-ci-${BUILD_NUMBER}"
+        DOCKERHUB_USER = "sabinbaba"
     }
 
     stages {
@@ -66,22 +67,22 @@ pipeline {
             }
         }
 
-        stage('Build Docker Images') {
-            parallel {
-                stage('Build Backend Docker Image') {
-                    steps {
-                        dir('hr-platform-backend') {
-                            sh 'docker build -t hr-platform-backend:${BUILD_NUMBER} .'
-                        }
-                    }
-                }
+        stage('Build & Push Docker Images') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh '''
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
 
-                stage('Build Frontend Docker Image') {
-                    steps {
-                        dir('hr-platform-frontend') {
-                            sh 'docker build -t hr-platform-frontend:${BUILD_NUMBER} .'
-                        }
-                    }
+                        docker build -t ${DOCKERHUB_USER}/hr-platform-backend:${BUILD_NUMBER} -t ${DOCKERHUB_USER}/hr-platform-backend:latest ./hr-platform-backend
+                        docker push ${DOCKERHUB_USER}/hr-platform-backend:${BUILD_NUMBER}
+                        docker push ${DOCKERHUB_USER}/hr-platform-backend:latest
+
+                        docker build -t ${DOCKERHUB_USER}/hr-platform-frontend:${BUILD_NUMBER} -t ${DOCKERHUB_USER}/hr-platform-frontend:latest ./hr-platform-frontend
+                        docker push ${DOCKERHUB_USER}/hr-platform-frontend:${BUILD_NUMBER}
+                        docker push ${DOCKERHUB_USER}/hr-platform-frontend:latest
+
+                        docker logout
+                    '''
                 }
             }
         }
@@ -94,14 +95,14 @@ pipeline {
                         aquasec/trivy:latest image \
                         --severity HIGH,CRITICAL \
                         --exit-code 0 \
-                        hr-platform-backend:${BUILD_NUMBER}
+                        ${DOCKERHUB_USER}/hr-platform-backend:${BUILD_NUMBER}
 
                     docker run --rm \
                         -v /var/run/docker.sock:/var/run/docker.sock \
                         aquasec/trivy:latest image \
                         --severity HIGH,CRITICAL \
                         --exit-code 0 \
-                        hr-platform-frontend:${BUILD_NUMBER}
+                        ${DOCKERHUB_USER}/hr-platform-frontend:${BUILD_NUMBER}
                 '''
             }
         }
@@ -111,8 +112,8 @@ pipeline {
         success {
             echo 'Pipeline completed successfully!'
             sh '''
-                docker images hr-platform-backend --format "{{.Tag}}" | grep -E "^[0-9]+$" | sort -rn | tail -n +6 | xargs -I {} docker rmi -f hr-platform-backend:{} || true
-                docker images hr-platform-frontend --format "{{.Tag}}" | grep -E "^[0-9]+$" | sort -rn | tail -n +6 | xargs -I {} docker rmi -f hr-platform-frontend:{} || true
+                docker images ${DOCKERHUB_USER}/hr-platform-backend --format "{{.Tag}}" | grep -E "^[0-9]+$" | sort -rn | tail -n +6 | xargs -I {} docker rmi -f ${DOCKERHUB_USER}/hr-platform-backend:{} || true
+                docker images ${DOCKERHUB_USER}/hr-platform-frontend --format "{{.Tag}}" | grep -E "^[0-9]+$" | sort -rn | tail -n +6 | xargs -I {} docker rmi -f ${DOCKERHUB_USER}/hr-platform-frontend:{} || true
             '''
         }
         failure {
