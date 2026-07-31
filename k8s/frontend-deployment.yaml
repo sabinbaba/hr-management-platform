@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: hr-platform-frontend:latest
-          imagePullPolicy: Never
+          image: sabinbaba/hr-platform-frontend:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 80
