@@ -4,6 +4,7 @@ pipeline {
     environment {
         COMPOSE_PROJECT_NAME = "hr-ci-${BUILD_NUMBER}"
         DOCKERHUB_USER = "sabinbaba"
+        GIT_REPO = "github.com/sabinbaba/hr-management-platform.git"
     }
 
     stages {
@@ -21,22 +22,44 @@ pipeline {
 
         stage('Dependency Scan (OWASP)') {
             options {
-                timeout(time: 10, unit: 'MINUTES')
+                timeout(time: 15, unit: 'MINUTES')
             }
             steps {
-                withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
-                    sh '''
-                        docker run --rm \
-                            -v $(pwd)/hr-platform-backend:/src \
-                            -v $(pwd)/owasp-reports:/report \
-                            owasp/dependency-check:latest \
-                            --scan /src \
-                            --format "HTML" \
-                            --project "hr-platform-backend" \
-                            --out /report \
-                            --nvdApiKey "$NVD_API_KEY" \
-                            --disableAssembly || true
-                    '''
+                script {
+                    def hasNvdKey = true
+                    try {
+                        withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
+                            sh '''
+                                docker run --rm \
+                                    -v $(pwd)/hr-platform-backend:/src \
+                                    -v $(pwd)/owasp-reports:/report \
+                                    owasp/dependency-check:latest \
+                                    --scan /src \
+                                    --format "HTML" \
+                                    --project "hr-platform-backend" \
+                                    --out /report \
+                                    --nvdApiKey "$NVD_API_KEY" \
+                                    --disableAssembly || true
+                            '''
+                        }
+                    } catch (Exception e) {
+                        hasNvdKey = false
+                    }
+
+                    if (!hasNvdKey) {
+                        echo "No NVD API key configured (credential 'nvd-api-key' not found) — running without it. This will be slower."
+                        sh '''
+                            docker run --rm \
+                                -v $(pwd)/hr-platform-backend:/src \
+                                -v $(pwd)/owasp-reports:/report \
+                                owasp/dependency-check:latest \
+                                --scan /src \
+                                --format "HTML" \
+                                --project "hr-platform-backend" \
+                                --out /report \
+                                --disableAssembly || true
+                        '''
+                    }
                 }
             }
             post {
@@ -110,6 +133,29 @@ pipeline {
                         --exit-code 0 \
                         ${DOCKERHUB_USER}/hr-platform-frontend:${BUILD_NUMBER}
                 '''
+            }
+        }
+
+        stage('Update K8s Manifests') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'github-creds', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN')]) {
+                    sh '''
+                        git config user.email "jenkins-ci@hr-platform.local"
+                        git config user.name "Jenkins CI Bot"
+
+                        sed -i "s|image: ${DOCKERHUB_USER}/hr-platform-backend:.*|image: ${DOCKERHUB_USER}/hr-platform-backend:${BUILD_NUMBER}|g" k8s/backend-deployment.yaml
+                        sed -i "s|image: ${DOCKERHUB_USER}/hr-platform-frontend:.*|image: ${DOCKERHUB_USER}/hr-platform-frontend:${BUILD_NUMBER}|g" k8s/frontend-deployment.yaml
+
+                        git add k8s/backend-deployment.yaml k8s/frontend-deployment.yaml
+
+                        if git diff --cached --quiet; then
+                            echo "No manifest changes to commit."
+                        else
+                            git commit -m "ci: bump image tags to build ${BUILD_NUMBER} [jenkins-bot]"
+                            git push https://${GIT_USER}:${GIT_TOKEN}@${GIT_REPO} HEAD:main
+                        fi
+                    '''
+                }
             }
         }
     }
