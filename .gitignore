@@ -26,3 +26,5 @@ hr-platform-backend/uploads/
 # Docker
 docker-compose.override.yml
 resume.pdf
+kubectl
+minikube-linux-amd64
