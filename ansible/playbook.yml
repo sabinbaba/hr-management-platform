@@ -1,0 +1,54 @@
+---
+- name: Prepare server for HR Platform deployment
+  hosts: hr_servers
+  become: true
+
+  tasks:
+    - name: Update apt package cache
+      command: apt-get update
+      register: apt_update_result
+      failed_when: apt_update_result.rc != 0 and 'hashicorp' not in apt_update_result.stderr
+      changed_when: false
+
+    - name: Install required system packages
+      command: apt-get install -y ca-certificates curl gnupg
+      register: pkg_install
+      changed_when: "'0 upgraded, 0 newly installed' not in pkg_install.stdout"
+
+    - name: Check if Docker is already installed
+      command: docker --version
+      register: docker_check
+      ignore_errors: true
+      changed_when: false
+
+    - name: Install Docker via convenience script
+      shell: curl -fsSL https://get.docker.com | sh
+      when: docker_check.failed
+
+    - name: Ensure Docker service is running
+      service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Add current user to docker group
+      user:
+        name: "{{ lookup('env', 'USER') }}"
+        groups: docker
+        append: true
+
+    - name: Create application directory
+      file:
+        path: /opt/hr-platform
+        state: directory
+        owner: "{{ lookup('env', 'USER') }}"
+        group: "{{ lookup('env', 'USER') }}"
+        mode: '0755'
+
+    - name: Create uploads directory (for document storage)
+      file:
+        path: /opt/hr-platform/uploads
+        state: directory
+        owner: "{{ lookup('env', 'USER') }}"
+        group: "{{ lookup('env', 'USER') }}"
+        mode: '0755'
