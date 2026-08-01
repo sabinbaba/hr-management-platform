@@ -28,3 +28,9 @@ docker-compose.override.yml
 resume.pdf
 kubectl
 minikube-linux-amd64
+terraform/.terraform/
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/.terraform/
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
