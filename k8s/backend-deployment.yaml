@@ -14,7 +14,7 @@ spec:
     spec:
       initContainers:
         - name: migrate
-          image: sabinbaba/hr-platform-backend:80
+          image: sabinbaba/hr-platform-backend:81
           imagePullPolicy: Always
           command: ["npx", "prisma", "migrate", "deploy"]
           env:
