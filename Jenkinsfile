@@ -11,6 +11,14 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
+                script {
+                    def lastCommitMsg = sh(script: "git log -1 --pretty=%B", returnStdout: true).trim()
+                    if (lastCommitMsg.contains('[jenkins-bot]')) {
+                        echo "Skipping pipeline — last commit was made by Jenkins itself."
+                        currentBuild.result = 'NOT_BUILT'
+                        error("Stopping pipeline: bot commit detected, avoiding infinite loop.")
+                    }
+                }
             }
         }
 
